@@ -1698,7 +1698,10 @@ var HanabiClueEntry = function(config) {
 
     background.on("mouseout", function() {
         background.setOpacity(0.1);
-        background.getLayer().batchDraw();
+        let background_layer = background.getLayer();
+        if (background_layer) {
+            background_layer.batchDraw();
+        }
 
         show_clue_match(-1);
     });
