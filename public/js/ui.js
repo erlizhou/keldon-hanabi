@@ -118,35 +118,6 @@ function keyboard_clue(ui, clue_type) {
     ui.stop_action();
 }
 
-$(document).keydown(function(event) {
-    //console.log(event.which); // Uncomment this to find out which number corresponds to the desired key
-
-    if (event.which === 49) { // "1"
-        keyboard_do_action(ui, 1);
-
-    } else if (event.which === 50) { // "2"
-        keyboard_do_action(ui, 2);
-
-    } else if (event.which === 51) { // "3"
-        keyboard_do_action(ui, 3);
-
-    } else if (event.which === 52) { // "4"
-        keyboard_do_action(ui, 4);
-
-    } else if (event.which === 53) { // "5"
-        keyboard_do_action(ui, 5);
-
-    } else if (event.which === 65) { // "a"
-        ui.keyboard_action = 'play';
-
-    } else if (event.which === 67) { // "c"
-        ui.keyboard_action = 'clue';
-
-    } else if (event.which === 68) { // "d"
-        ui.keyboard_action = 'discard';
-    }
-});
-
 /*
     Misc. functions
 */
@@ -3443,9 +3414,11 @@ this.build_ui = function() {
         image: "rewindfull",
     });
 
-    button.on("click tap", function() {
+    var rewindfull_function = function() {
         ui.perform_replay(0);
-    });
+    };
+
+    button.on("click tap", rewindfull_function);
 
     replay_area.add(button);
 
@@ -3457,9 +3430,11 @@ this.build_ui = function() {
         image: "rewind",
     });
 
-    button.on("click tap", function() {
+    var backward_function = function() {
         ui.perform_replay(self.replay_turn - 1, true);
-    });
+    };
+
+    button.on("click tap", backward_function);
 
     replay_area.add(button);
 
@@ -3471,9 +3446,12 @@ this.build_ui = function() {
         image: "forward",
     });
 
-    button.on("click tap", function() {
+
+    var forward_function = function() {
         ui.perform_replay(self.replay_turn + 1);
-    });
+    };
+
+    button.on("click tap", forward_function);
 
     replay_area.add(button);
 
@@ -3485,9 +3463,19 @@ this.build_ui = function() {
         image: "forwardfull",
     });
 
-    button.on("click tap", function() {
+    var forwardfull_function = function() {
         ui.perform_replay(self.replay_max, true);
-    });
+    };
+
+    button.on("click tap", forwardfull_function);
+
+    var backward_round = function () {
+        ui.perform_replay(self.replay_turn - nump, true);
+    };
+
+    var forward_round = function () {
+        ui.perform_replay(self.replay_turn + nump);
+    };
 
     replay_area.add(button);
 
@@ -3524,6 +3512,46 @@ this.build_ui = function() {
 
     replay_area.hide();
     uilayer.add(replay_area);
+
+    let replayNavigationKeyMap = {
+        "End" : forwardfull_function,
+        "Home" : rewindfull_function,
+
+        "ArrowLeft" : backward_function,
+        "ArrowRight" : forward_function,
+
+        "[" :  backward_round,
+        "]" : forward_round,
+    };
+
+    let actionKeyMap = {
+        "a" : function () { ui.keyboard_action = 'play';    },
+        "c" : function () { ui.keyboard_action = 'clue';    },
+        "d" : function () { ui.keyboard_action = 'discard'; },
+    };
+
+    this.keyNavigation = function (e) {
+        let currentNavigation = undefined;
+        if (replay_area.visible()) {
+            currentNavigation = replayNavigationKeyMap[e.key];
+        } else {
+            if (1 <= e.which && e.which <= 5) {
+                currentNavigation = function () {
+                    keyboard_do_action(ui, Number(e.which));
+                };
+            } else {
+                currentNavigation = actionKeyMap[e.key];
+            }
+        }
+
+        if (currentNavigation !== undefined)
+        {
+            e.preventDefault();
+            currentNavigation();
+        }
+    };
+
+    $(document).keydown(this.keyNavigation);
 
     helpgroup = new Kinetic.Group({
         x: 0.1 * win_w,
@@ -4650,6 +4678,7 @@ this.set_message = function(msg) {
 
 this.destroy = function() {
     stage.destroy();
+    $(document).unbind('keydown', this.keyNavigation);
     if (ui.timerId !== null) {
         window.clearInterval(ui.timerId);
         ui.timerId = null;
